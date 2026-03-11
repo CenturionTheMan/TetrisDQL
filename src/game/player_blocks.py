@@ -42,6 +42,5 @@ SHAPE_T = np.array([
 ])
 
 def get_all_blocks() -> List[np.ndarray]:
-    return [SHAPE_I] #TODO remove 
     return [SHAPE_O, SHAPE_I, SHAPE_S, SHAPE_Z, SHAPE_L, SHAPE_J, SHAPE_T] 
     
