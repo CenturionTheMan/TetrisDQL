@@ -1,30 +1,30 @@
 import numpy as np
-from game.player_shapes import get_all_shapes
+from game.player_blocks import get_all_blocks
 import random
-
-
+from game.vec2 import Vec2
+from game.grid import Grid
 
 
 class Player:
     def __init__(self):
-        self.current_shape = None
-        self.change_shape()
+        self.current_block : Grid = None
+        self.change_block()
         
-    def get_width(self) -> int:
-        return self.current_shape.shape[1]
+    def get_size(self) -> Vec2:
+        return self.current_shape.get_shape()
     
-    def get_height(self) -> int:
-        return self.current_shape.shape[0]
-    
-    def change_shape(self) -> None:
-        all_shapes = get_all_shapes()
-        self.current_shape = random.choice(all_shapes)
+    def change_block(self) -> None:
+        all_blocks = get_all_blocks()
+        rnd = random.choice(all_blocks)
+        grid = Grid(Vec2(0,0))
+        grid.set_map(rnd)
+        self.current_block = grid
         
-    def remove_shape(self) -> None:
-        self.current_shape = None
+    def remove_block(self) -> None:
+        self.current_block = None
         
     def is_falling(self) -> bool:
-        return self.current_shape is not None
-        
-    def get_shape(self) -> np.ndarray:
-        return self.current_shape
+        return self.current_block is not None
+    
+    def get_block(self) -> Grid:
+        return self.current_block
