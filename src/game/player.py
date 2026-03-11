@@ -11,7 +11,7 @@ class Player:
         self.change_block()
         
     def get_size(self) -> Vec2:
-        return self.current_shape.get_shape()
+        return self.current_block.get_shape()
     
     def change_block(self) -> None:
         all_blocks = get_all_blocks()

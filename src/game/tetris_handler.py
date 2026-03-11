@@ -3,34 +3,61 @@ import numpy as np
 from game.player import Player
 from game.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
 from game.grid import Grid
+import random
 
 class TetrisHandler(object):
     def __init__(self, gird_size:Tuple[int,int] = (16,8)):
         self.grid = Grid(Vec2(gird_size[0], gird_size[1]))
         self.player = Player()
-        self.player_bottom_left = Vec2(0,0) #! y,x
+        
+        player_height = self.player.get_size().get_y()
+        self.player_top_left = Vec2(0,-player_height) #! y,x
         self.points = 0
         self.is_end = False
         
     def update(self) -> None:
-        if self.player.is_falling(): #if player is still falling then we need to check if it has collided with something
+        if self.is_end:
+            return
+        
+        if self.player.is_falling():
+            
             if self.has_player_collided():
                 self.add_player_shape_to_grid()
-                self.player.remove_shape()
+                self.player.remove_block()
             else:
-                #TODO check left/right input request -> move player one block if so
-                self.player_bottom_left.add(VEC_DOWN) # move player one block down
+                self.player_top_left += VEC_DOWN 
+                
         else:
-            # if self.check_rows_fulfillment(): #check rows to remove if row full 
-            #     return #if rows were deleted wait for one iteration
-            #TODO check if ony column full -> end game
-            #TODO setup player new position and shape
-            pass
+            _ = self.check_rows_fulfillment()
+            
+            if self.check_end_condition():
+                return
+            
+            self.create_player_block()
+    
+    def is_game_over(self) -> bool:
+        return self.is_end
+    
+    def check_end_condition(self) -> bool:
+        for x in range(self.grid.get_shape().get_x()):
+            if self.grid.get_value(x,0) != 0:
+                self.is_end = True
+                return True
+        return False
+    
+    def create_player_block(self) -> None:
+        if self.player.get_block() is not None:
+            return
+        self.player.change_block()
+        self.player_top_left = Vec2(
+            random.randint(0, self.grid.get_shape().get_x() - self.player.get_size().get_x()), 
+            -self.player.get_size().get_y())
+        
     
     def add_player_shape_to_grid(self):
         block = self.player.get_block()
         shape = block.get_shape()
-        pbl = self.player_bottom_left
+        pbl = self.player_top_left
         
         for x in range(shape.get_x()):
             for y in range(shape.get_y()):
@@ -39,7 +66,7 @@ class TetrisHandler(object):
                     self.grid.set_value(pbl.get_x() + x, pbl.get_y() + y, v)
     
     def has_player_collided(self): #Would collide on next frame
-        pblc = self.player_bottom_left
+        pblc = self.player_top_left
         block = self.player.get_block()
         shape = block.get_shape()
         
@@ -65,27 +92,25 @@ class TetrisHandler(object):
         return False
     
     
-    def check_rows_fulfillment(self) -> bool:
-        for y in range(self.grid.get_size().get_y()):
-            if self.is_row_full(y):
-                self.delete_row(y)
-                return True
-        return False
-    
-    def is_row_full(self, y) -> bool:
-        for x in range(self.grid.get_size().get_x()):
-            if self.grid.get_value(x,y) == 0:
-                return False
+    def check_rows_fulfillment(self) -> True:
+        to_remove = []
+        for row_idx in range(self.grid.get_shape().get_y()):
+            has_zeros = self.grid.check_if_row_has_any_zeros(row_idx)
+            if not has_zeros:
+                to_remove.append(row_idx)
+        if len(to_remove) == 0:
+            return False
+        
+        self.points += len(to_remove)
+        
+        for row_idx in to_remove:
+            for y in range(row_idx, 0, -1):
+                for x in range(self.grid.get_shape().get_x()):
+                    self.grid.set_value(x,y,self.grid.get_value(x,y-1))
         return True
     
-    def delete_row(self, y) -> None:
-        for x in range(self.grid.get_size().get_x()):
-            self.grid.set_value(x,y,0)
-        
-        for y_tmp in range(y-1, -1, -1):
-            for x in range(self.grid.get_size().get_x()):
-                val = self.grid.get_value(x,y_tmp)
-                self.grid.set_value(x,y_tmp+1,val)
+    def get_point(self) -> int:
+        return self.points
         
         
     def get_draw_grid(self) -> Grid:
@@ -96,11 +121,12 @@ class TetrisHandler(object):
         
         block = self.player.get_block()
         shape = block.get_shape()
-        pbl = self.player_bottom_left
+        pbl = self.player_top_left
         
         for x in range(shape.get_x()):
             for y in range(shape.get_y()):
                 v = block.get_value(x,y)
                 if v != 0:
-                    tmp_grid.set_value(pbl.get_x() + x, pbl.get_y() + y, v)
+                    px, py = pbl.get_x() + x, pbl.get_y() + y
+                    _ = tmp_grid.try_set_value(px, py, v)
         return tmp_grid
