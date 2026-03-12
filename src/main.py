@@ -1,13 +1,6 @@
-from game.tetris_handler import TetrisHandler
-from game.grid import Grid
+from game.console_ui.console_gui import TetrisConsoleGUI
 
-game = TetrisHandler(gird_size=(4,16))
-print()
-for i in range(200):
-    if not game.is_game_over():
-        print(game)
-        game.update()
-        print()
-    else:
-        print("GAME OVER")
-        break
+
+if __name__ == "__main__":
+    tetrisGUI = TetrisConsoleGUI()
+    tetrisGUI.run()

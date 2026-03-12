@@ -1,8 +1,8 @@
 import numpy as np
-from game.player_blocks import get_all_blocks
+from game.logic.player_blocks import get_all_blocks
 import random
-from game.vec2 import Vec2
-from game.grid import Grid
+from game.logic.vec2 import Vec2
+from game.logic.grid import Grid
 
 
 class Player:

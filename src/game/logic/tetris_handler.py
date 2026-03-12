@@ -1,8 +1,8 @@
 from typing import Tuple
 import numpy as np
-from game.player import Player
-from game.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
-from game.grid import Grid
+from game.logic.player import Player
+from game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
+from game.logic.grid import Grid
 import random
 
 
@@ -14,8 +14,11 @@ class TetrisHandler(object):
     # Initialization
     # -------------------------------------------------------------------------
 
-    def __init__(self, gird_size: Tuple[int, int] = (16, 8)):
-        """Set up the grid, player, and initial game state."""
+    def __init__(self, gird_size: Tuple[int, int] = (10, 20)):
+        """
+            Set up the grid, player, and initial game state.
+            gird_size: (width, height) tuple specifying the grid dimensions.
+        """
         self.__grid = Grid(Vec2(gird_size[0], gird_size[1]))
         self.__player = Player()
 
@@ -96,13 +99,19 @@ class TetrisHandler(object):
             for y in range(shape.get_y()):
                 v = block.get_value(x, y)
                 if v != 0:
-                    self.__grid.set_value(pbl.get_x() + x, pbl.get_y() + y, v)
+                    self.__grid.set_value(pbl.get_x() + x, pbl.get_y() + y, -v)
 
     def try_move(self, is_right : bool) -> None:
-        """Move the player block one step to the right, if possible."""
-        player_shape = self.__player.get_block().get_shape()
-        #TODO implement
+        """Attempt to move the player block left or right. Does nothing if the move would cause a collision."""
+        if self.__is_end or not self.__player.is_falling():
+            return
         
+        dir_change = VEC_RIGHT if is_right else VEC_LEFT
+        
+        tmp_player_pos = self.__player_top_left + dir_change 
+        if self.__grid.is_gird_overlap(self.__player.get_block(), tmp_player_pos):
+            return
+        self.__player_top_left = tmp_player_pos
 
     # -------------------------------------------------------------------------
     # Collision detection
@@ -111,7 +120,7 @@ class TetrisHandler(object):
     def has_player_collided(self) -> bool:
         """Return True if the player block would collide on the next frame -
         either by hitting the bottom of the grid or landing on a placed block."""
-        pblc = self.__player_top_left
+        ptl = self.__player_top_left
         block = self.__player.get_block()
         shape = block.get_shape()
 
@@ -121,11 +130,11 @@ class TetrisHandler(object):
                 if val == 0:
                     continue  # Empty cell in the block shape, skip
 
-                y_tmp = yp + pblc.get_y()
+                y_tmp = yp + ptl.get_y()
                 if y_tmp < 0:
                     continue  # This pixel is still above the visible grid
 
-                x_g, y_g = pblc.get_x() + xp, y_tmp + 1
+                x_g, y_g = ptl.get_x() + xp, y_tmp + 1
 
                 if not self.__grid.is_pos_in_bounds(Vec2(x_g, y_g)):
                     return True  # Next position would be out of bounds (hit bottom)

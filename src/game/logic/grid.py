@@ -1,5 +1,5 @@
 import numpy as np
-from game.vec2 import Vec2
+from game.logic.vec2 import Vec2
 
 
 class Grid:
@@ -33,7 +33,7 @@ class Grid:
         """Return a deep copy of this grid."""
         g = Grid(self.get_shape())
         g.set_map(self.map.copy())
-        return g
+        return g        
 
     # -------------------------------------------------------------------------
     # Bounds checking
@@ -45,6 +45,28 @@ class Grid:
             pos.get_x() >= 0 and pos.get_x() < self.map.shape[1] and
             pos.get_y() >= 0 and pos.get_y() < self.map.shape[0]
         )
+
+    def is_gird_overlap(self, grid: "Grid", offset: Vec2) -> bool:
+        """Return True if the given grid overlaps with this grid at the specified offset.
+        Checks for both out-of-bounds and non-zero cell collisions."""
+        if grid is None:
+            return False
+        tmp_shape = grid.get_shape()
+        for x in range(tmp_shape.get_x()):
+            for y in range(tmp_shape.get_y()):
+                v = grid.get_value(x, y)
+                if v == 0:
+                    continue  # Empty cell, no collision
+
+                x_g = offset.get_x() + x
+                y_g = offset.get_y() + y
+                
+                if not self.is_pos_in_bounds(Vec2(x_g, y_g)):
+                    return True  # Out of bounds counts as a collision
+                if self.get_value(x_g, y_g) != 0:
+                    return True  # Non-zero cell collision
+        return False
+
 
     # -------------------------------------------------------------------------
     # Reading values
@@ -84,15 +106,27 @@ class Grid:
     def __str__(self) -> str:
         """Return a formatted string of the grid with column letters and row numbers.
         Each cell is padded to 3 characters wide."""
+        
+        from game.console_ui.console_colors import Fore, Style
+        
         rows, cols = self.map.shape
 
-        # Header row with column letters (A, B, C, ...)
         col_letters = [chr(ord('A') + i) for i in range(cols)]
         header = "     " + "  ".join(f"{l:>3}" for l in col_letters)
 
         lines = [header]
         for y in range(rows):
-            row_str = f"{y:>3} |" + "  ".join(f"{self.map[y][x]:>3}" for x in range(cols))
+            row_cells = []
+            for x in range(cols):
+                v = self.map[y][x]
+                if v > 0:
+                    cell = f"{Fore.CYAN}{'█':>3}{Style.RESET_ALL}"
+                elif v < 0:
+                    cell = f"{Fore.YELLOW}{'█':>3}{Style.RESET_ALL}"
+                else:
+                    cell = f"{'.'  :>3}"
+                row_cells.append(cell)
+            row_str = f"{y:>3} |" + "  ".join(row_cells)
             lines.append(row_str)
 
         return "\n".join(lines)
