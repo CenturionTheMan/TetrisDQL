@@ -21,13 +21,25 @@ class TetrisConsoleGUI:
 
     def on_release(self, key):
         if key == keyboard.Key.right:
-            self.key_queue.put(True)
+            self.key_queue.put("move_right")
         elif key == keyboard.Key.left:
-            self.key_queue.put(False)
+            self.key_queue.put("move_left")
+        elif key == keyboard.KeyCode.from_char('z'):
+            self.key_queue.put('rotate_ccw')
+        elif key == keyboard.KeyCode.from_char('x'):
+            self.key_queue.put('rotate_cw')
 
     def handle_input(self):
         while not self.key_queue.empty():
-            self.game.try_move(self.key_queue.get())
+            key = self.key_queue.get()
+            if key == "move_right":
+                self.game.try_move(is_right=True)
+            elif key == "move_left":
+                self.game.try_move(is_right=False)
+            elif key == 'rotate_ccw':
+                self.game.try_rotate(is_clockwise=False)
+            elif key == 'rotate_cw':
+                self.game.try_rotate(is_clockwise=True)
 
     def run(self):
         self.listener.start()

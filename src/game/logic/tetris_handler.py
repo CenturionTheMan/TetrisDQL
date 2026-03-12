@@ -101,7 +101,7 @@ class TetrisHandler(object):
                 if v != 0:
                     self.__grid.set_value(pbl.get_x() + x, pbl.get_y() + y, -v)
 
-    def try_move(self, is_right : bool) -> None:
+    def try_move(self, is_right : bool) -> bool:
         """Attempt to move the player block left or right. Does nothing if the move would cause a collision."""
         if self.__is_end or not self.__player.is_falling():
             return
@@ -109,10 +109,25 @@ class TetrisHandler(object):
         dir_change = VEC_RIGHT if is_right else VEC_LEFT
         
         tmp_player_pos = self.__player_top_left + dir_change 
-        if self.__grid.is_gird_overlap(self.__player.get_block(), tmp_player_pos):
+        if not self.__grid.is_gird_overlap(self.__player.get_block(), tmp_player_pos):
+            self.__player_top_left = tmp_player_pos
+            return True
+        return False
+        
+    def try_rotate(self, is_clockwise: bool) -> bool:
+        """
+        Attempt to rotate the player block 90 or -90 degrees.
+        Does nothing if the rotation would cause a collision.
+        """
+        if self.__is_end or not self.__player.is_falling():
             return
-        self.__player_top_left = tmp_player_pos
-
+        
+        new_block = self.__player.get_rotated_block(is_clockwise)
+        if not self.__grid.is_gird_overlap(new_block, self.__player_top_left):
+            self.__player.set_block(new_block)
+            return True
+        return False
+            
     # -------------------------------------------------------------------------
     # Collision detection
     # -------------------------------------------------------------------------

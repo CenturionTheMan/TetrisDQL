@@ -9,9 +9,12 @@ class Grid:
     # Initialization
     # -------------------------------------------------------------------------
 
-    def __init__(self, size: Vec2):
+    def __init__(self, size: Vec2|None):
         """Create a grid of the given size, filled with zeros."""
-        self.map = np.zeros(shape=(size.get_y(), size.get_x()), dtype=np.int32)
+        if size is None:
+            self.map = np.zeros(shape=(0,0), dtype=np.int32)
+        else:
+            self.map = np.zeros(shape=(size.get_y(), size.get_x()), dtype=np.int32)
 
     # -------------------------------------------------------------------------
     # Map access

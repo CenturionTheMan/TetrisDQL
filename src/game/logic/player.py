@@ -48,3 +48,20 @@ class Player:
     def remove_block(self) -> None:
         """Clear the current block (called when it locks into the grid)."""
         self.current_block = None
+    
+    def set_block(self, new_block: Grid) -> None:
+        self.current_block = new_block
+        
+    def get_rotated_block(self, is_90_positive: bool) -> Grid:
+        """Rotate the current block 90 degrees in the specified direction."""
+        if self.current_block is None:
+            return
+        
+        if is_90_positive:
+            new_map = np.rot90(self.current_block.get_map(), k=-1)  # clockwise
+        else:
+            new_map = np.rot90(self.current_block.get_map(), k=1)   # counterclockwise
+            
+        tmp = Grid(None)
+        tmp.set_map(new_map)
+        return tmp
