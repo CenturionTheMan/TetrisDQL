@@ -63,8 +63,16 @@ class TetrisHandler(object):
         return self.__is_end
 
     def get_points(self) -> int:
-        """Return the current score (one point per cleared row)."""
+        """Return the current score."""
         return self.__points
+
+    def get_grid(self) -> Grid:
+        """Return the internal grid (without the active block)."""
+        return self.__grid
+
+    def get_player_top_left(self) -> Vec2:
+        """Return the top-left position of the active player block."""
+        return self.__player_top_left
 
     def check_end_condition(self) -> bool:
         """Check if any cell in the top row is occupied. If so, end the game."""
@@ -99,7 +107,7 @@ class TetrisHandler(object):
             for y in range(shape.get_y()):
                 v = block.get_value(x, y)
                 if v != 0:
-                    self.__grid.set_value(pbl.get_x() + x, pbl.get_y() + y, -v)
+                    self.__grid.try_set_value(pbl.get_x() + x, pbl.get_y() + y, -v)
 
     def try_move(self, is_right : bool) -> bool:
         """Attempt to move the player block left or right. Does nothing if the move would cause a collision."""
@@ -174,13 +182,19 @@ class TetrisHandler(object):
         if len(to_remove) == 0:
             return False
 
-        self.__points += len(to_remove)
+        for row_idx in to_remove:
+            row_sum = 0
+            for x in range(self.__grid.get_shape().get_x()):
+                row_sum += self.__grid.get_value(x, row_idx)
+            self.__points += row_sum ** 2
 
         # Shift all rows above each cleared row downward
         for row_idx in to_remove:
             for y in range(row_idx, 0, -1):
                 for x in range(self.__grid.get_shape().get_x()):
                     self.__grid.set_value(x, y, self.__grid.get_value(x, y - 1))
+            for x in range(self.__grid.get_shape().get_x()):
+                self.__grid.set_value(x, 0, 0)
 
         return True
 

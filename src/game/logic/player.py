@@ -38,9 +38,11 @@ class Player:
     # -------------------------------------------------------------------------
 
     def change_block(self) -> None:
-        """Replace the current block with a new randomly chosen one."""
+        """Replace the current block with a new randomly chosen one.
+        Each filled cell gets a random value from -1 to -10."""
         all_blocks = get_all_blocks()
-        rnd = random.choice(all_blocks)
+        rnd = random.choice(all_blocks).copy()
+        rnd[rnd != 0] = -random.randint(1, 10)
         grid = Grid(Vec2(0, 0))
         grid.set_map(rnd)
         self.current_block = grid
