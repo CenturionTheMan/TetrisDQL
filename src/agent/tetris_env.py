@@ -3,78 +3,161 @@ from game.logic.tetris_handler import TetrisHandler
 
 
 class TetrisEnv:
-    """Gym-like environment wrapper for TetrisHandler.
 
-    Actions:
-        0 = move left
-        1 = move right
-        2 = rotate clockwise
-        3 = rotate counter-clockwise
-        4 = no-op (just let gravity tick)
-
-    State:
-        Flattened draw grid (10*20 = 200 values), normalized to [0, 1].
-
-    Reward:
-        +points_delta  when rows are cleared (sum² scoring)
-        -10            on game over
-        +0.01          per survived tick (encourages staying alive)
-    """
-
-    NUM_ACTIONS = 5
     GRID_WIDTH = 10
     GRID_HEIGHT = 20
+    STATE_SIZE = GRID_WIDTH + 4  # dziury, nierówność(różnica wysokości między sąsiednymi kolumnami), maksymalna wysokość, wyczyszczone linie
 
     def __init__(self):
         self.game: TetrisHandler | None = None
-        self.state_size = self.GRID_WIDTH * self.GRID_HEIGHT
+        self.state_size = self.STATE_SIZE
         self.reset()
 
-    def reset(self) -> np.ndarray:
-        """Reset the game and return the initial state."""
+    def reset(self) -> list:
         self.game = TetrisHandler((self.GRID_WIDTH, self.GRID_HEIGHT))
-        return self._get_state()
+        return self.get_valid_placements()
 
-    def step(self, action: int) -> tuple[np.ndarray, float, bool]:
-        """Execute one action + one gravity tick.
+    def step(self, action_idx: int) -> tuple[list, float, bool]:
 
-        Returns:
-            state:  new observation (flattened grid)
-            reward: reward for this step
-            done:   True if game over
-        """
-        points_before = self.game.get_points()
+        placements = self.get_valid_placements() # dostajemy możliwe położenia klocka na całej mapie
+        if not placements: # jeśli nie ma miejsca to koniec gry
+            return [], -5.0, True
 
-        # Apply action
-        if action == 0:
-            self.game.try_move(is_right=False)
-        elif action == 1:
-            self.game.try_move(is_right=True)
-        elif action == 2:
-            self.game.try_rotate(is_clockwise=True)
-        elif action == 3:
-            self.game.try_rotate(is_clockwise=False)
-        # action == 4: no-op
+        action_idx = min(action_idx, len(placements) - 1) # zabezpieczenie jeśli sieć zwróci za duży indeks
+        rotations, col, _ = placements[action_idx] # ilość rotacji, ustaw na col
 
-        # Gravity tick
-        self.game.update()
+        lines_cleared = self.game.execute_placement(rotations, col) # ustawiamy klocek
+        done = self.game.is_game_over() # sprawdzamy czy koniec grt
 
-        done = self.game.is_game_over()
-        points_after = self.game.get_points()
-        points_delta = points_after - points_before
-
-        # Reward
-        reward = float(points_delta)
+        reward = [0.0, 1.0, 3.0, 5.0, 8.0][min(lines_cleared, 4)] # nagroda w zależności od zbitych rzędów
         if done:
-            reward -= 10.0
-        else:
-            reward += 0.01  # survival bonus
+            reward -= 5.0
 
-        return self._get_state(), reward, done
+        if done:
+            return [], reward, True
 
-    def _get_state(self) -> np.ndarray:
-        """Return the current grid (with active block) as a flat float32 array, normalized."""
-        grid = self.game.get_draw_grid().get_map().flatten().astype(np.float32)
-        # Normalize: values range roughly from -10 to 10, map to [0, 1]
-        grid = (grid + 10.0) / 20.0
-        return grid
+        return self.get_valid_placements(), reward, False
+
+    def get_valid_placements(self) -> list:
+
+        block = self.game.get_player_block() # jaki klocek jest obecnie
+        if block is None:  # jeśli nie ma
+            return []
+
+        grid_map = self.game.get_grid().get_map()   # dostajemy mapę
+        block_map = block.get_map() # dostajemy figurę jako tablice
+
+        placements = []
+        seen = set()  # unikamy zduplikowanych stanów planszy (symetryczne rotacje)
+
+        for rotations in range(4):
+            rotated = np.rot90(block_map, k=-rotations)   # rotations krotne obroty zgodnie z ruchem wskazówek
+            rh, rw = rotated.shape
+
+            for col in range(self.GRID_WIDTH):
+                in_bounds = all(
+                    0 <= col + bc < self.GRID_WIDTH
+                    for br in range(rh)
+                    for bc in range(rw)
+                    if rotated[br, bc] != 0
+                ) # sprawdzamy czy klocek się mieści w mapie
+                if not in_bounds:
+                    continue
+
+                result = self._simulate_drop(grid_map, rotated, col) # zrzucamy klocek na dół
+                if result is None:
+                    continue
+ 
+                result, lines_cleared = self._clear_lines(result) # czyścimy linie jeśli pełna
+
+                key = result.tobytes() # unikalny id planszy
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                features = self._compute_features(result, lines_cleared)
+                placements.append((rotations, col, features)) # dodajemy stan
+
+        return placements
+
+    def _simulate_drop(self, grid_map: np.ndarray, block_map: np.ndarray, col: int) -> np.ndarray | None:
+        rows = grid_map.shape[0]
+        bh, bw = block_map.shape
+
+        # Opuść klocek tak nisko, jak to możliwe
+        drop_row = -bh
+        while self._can_place(grid_map, block_map, col, drop_row + 1):
+            drop_row += 1
+
+        # Klocek musi mieć przynajmniej jedną komórkę wewnątrz siatki
+        any_in_grid = any(
+            0 <= drop_row + br < rows and block_map[br, bc] != 0
+            for br in range(bh)
+            for bc in range(bw)
+        )
+        if not any_in_grid:
+            return None
+
+        result = grid_map.copy()
+        for br in range(bh):
+            for bc in range(bw):
+                if block_map[br, bc] != 0:
+                    gr = drop_row + br
+                    gc = col + bc
+                    if 0 <= gr < rows:
+                        result[gr, gc] = block_map[br, bc]
+        return result
+
+    def _can_place(self, grid_map: np.ndarray, block_map: np.ndarray, col: int, row: int) -> bool:
+        """Sprawdź czy klocek może być umieszczony w pozycji (col, row) bez kolizji."""
+        rows, cols = grid_map.shape
+        for br in range(block_map.shape[0]):
+            for bc in range(block_map.shape[1]):
+                if block_map[br, bc] == 0:
+                    continue
+                gr = row + br
+                gc = col + bc
+                if gc < 0 or gc >= cols:
+                    return False
+                if gr >= rows:
+                    return False
+                if gr >= 0 and grid_map[gr, gc] != 0:
+                    return False
+        return True
+
+    def _clear_lines(self, grid_map: np.ndarray) -> tuple[np.ndarray, int]:
+        """Usuń pełne wiersze i zwróć (nowa_siatka, liczba_wyczyszczonych)."""
+        full = np.all(grid_map != 0, axis=1)
+        n = int(full.sum())
+        if n == 0:
+            return grid_map, 0
+        kept = grid_map[~full]
+        empty = np.zeros((n, grid_map.shape[1]), dtype=grid_map.dtype)
+        return np.vstack([empty, kept]), n
+
+    def _compute_features(self, grid_map: np.ndarray, lines_cleared: int) -> np.ndarray:
+        """Oblicz 14 znormalizowanych cech z planszy po umieszczeniu."""
+        heights = np.zeros(self.GRID_WIDTH, dtype=np.float32)
+        for col in range(self.GRID_WIDTH):
+            for row in range(self.GRID_HEIGHT):
+                if grid_map[row, col] != 0:
+                    heights[col] = self.GRID_HEIGHT - row
+                    break
+
+        holes = sum(
+            1
+            for col in range(self.GRID_WIDTH)
+            for row in range(self.GRID_HEIGHT - int(heights[col]) + 1, self.GRID_HEIGHT)
+            if grid_map[row, col] == 0
+        )
+
+        bumpiness = float(np.sum(np.abs(np.diff(heights))))
+        max_height = float(np.max(heights))
+
+        return np.array([
+            *heights / self.GRID_HEIGHT,
+            holes / (self.GRID_WIDTH * self.GRID_HEIGHT),
+            bumpiness / (self.GRID_WIDTH * self.GRID_HEIGHT),
+            max_height / self.GRID_HEIGHT,
+            lines_cleared / 4.0,
+        ], dtype=np.float32)

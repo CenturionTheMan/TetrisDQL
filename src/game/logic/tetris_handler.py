@@ -171,16 +171,51 @@ class TetrisHandler(object):
     # Row clearing
     # -------------------------------------------------------------------------
 
-    def check_rows_fulfillment(self) -> bool:
+    def get_player_block(self):
+        """Return the current player block grid (None if no block is active)."""
+        return self.__player.get_block()
+
+    def execute_placement(self, rotations: int, target_col: int) -> int:
+        """Rotate piece clockwise `rotations` times, teleport to target_col, hard-drop.
+
+        Returns the number of lines cleared by the placement.
+        Spawns the next piece automatically (or marks game over).
+        """
+        # Rotate clockwise N times
+        for _ in range(rotations % 4):
+            new_block = self.__player.get_rotated_block(is_90_positive=True)
+            self.__player.set_block(new_block)
+
+        # Teleport horizontally to target column (keep spawn y)
+        self.__player_top_left = Vec2(target_col, self.__player_top_left.get_y())
+
+        # Hard drop
+        while not self.has_player_collided():
+            self.__player_top_left += VEC_DOWN
+
+        # Lock into grid
+        self.add_player_shape_to_grid()
+        self.__player.remove_block()
+
+        # Clear lines and count
+        lines_cleared = self.check_rows_fulfillment()
+
+        # Check end condition; spawn next piece if game continues
+        if not self.check_end_condition():
+            self.create_player_block()
+
+        return lines_cleared
+
+    def check_rows_fulfillment(self) -> int:
         """Find and clear all fully filled rows, then shift everything above down.
-        Awards one point per cleared row. Returns True if any rows were cleared."""
+        Awards points per cleared row. Returns the number of rows cleared."""
         to_remove = []
         for row_idx in range(self.__grid.get_shape().get_y()):
             if not self.__grid.check_if_row_has_any_zeros(row_idx):
                 to_remove.append(row_idx)
 
         if len(to_remove) == 0:
-            return False
+            return 0
 
         for row_idx in to_remove:
             row_sum = 0
@@ -196,7 +231,7 @@ class TetrisHandler(object):
             for x in range(self.__grid.get_shape().get_x()):
                 self.__grid.set_value(x, 0, 0)
 
-        return True
+        return len(to_remove)
 
     # -------------------------------------------------------------------------
     # Rendering

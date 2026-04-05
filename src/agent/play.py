@@ -6,28 +6,25 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from agent.tetris_env import TetrisEnv
-from agent.dql_agent import DQLAgent
+from agent.agent import DQLAgent
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pth")
-FRAME_DELAY = 0.05  # seconds between frames
+FRAME_DELAY = 0.3  # czas między klockami (placement-based: jeden krok = jeden klocek)
 
 
 def play():
     env = TetrisEnv()
-    agent = DQLAgent(
-        state_size=env.state_size,
-        action_size=TetrisEnv.NUM_ACTIONS,
-    )
+    agent = DQLAgent(state_size=TetrisEnv.STATE_SIZE)
     agent.load(MODEL_PATH)
-    agent.epsilon = 0.0  # no exploration, only exploit
+    agent.epsilon = 0.0  # tryb w pełni greedy
 
-    state = env.reset()
+    placements = env.reset()
 
-    while not env.game.is_game_over():
+    while placements and not env.game.is_game_over():
         os.system("cls" if os.name == "nt" else "clear")
         print(env.game)
-        action = agent.select_action(state)
-        state, reward, done = env.step(action)
+        action_idx = agent.select_action(placements)
+        placements, reward, done = env.step(action_idx)
         time.sleep(FRAME_DELAY)
 
     os.system("cls" if os.name == "nt" else "clear")

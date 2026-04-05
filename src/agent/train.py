@@ -1,72 +1,68 @@
 import sys
 import os
 
-# Add src/ to path so imports work when running from src/
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from agent.tetris_env import TetrisEnv
-from agent.dql_agent import DQLAgent
+from agent.agent import DQLAgent
 
-NUM_EPISODES = 2000
-MAX_STEPS_PER_EPISODE = 5000
-SAVE_EVERY = 100
+NUM_EPISODES = 5000 # ilość gier
+SAVE_EVERY = 100 # co ile zapisać model
+MAX_PIECES = 500   # limit klocków na epizod — zapobiega nieskończonym grom po nauce
+LEARN_EVERY = 4    # ucz się raz na N klocków zamiast przy każdym — szybszy trening
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pth")
 
 
 def train():
-    env = TetrisEnv()
-    agent = DQLAgent(
-        state_size=env.state_size,
-        action_size=TetrisEnv.NUM_ACTIONS,
-    )
+    env = TetrisEnv() # tworzymy środowisko
+    agent = DQLAgent(state_size=TetrisEnv.STATE_SIZE) # tworzymy agenta
 
-    best_reward = float("-inf")
+    best_points = 0 # najwyższa ilość punktów
 
     for episode in range(1, NUM_EPISODES + 1):
-        state = env.reset()
-        total_reward = 0.0
-        steps = 0
+        placements = env.reset() # tworzymy nową grę poprzez reset
+        total_reward = 0.0 # łączna nagroda
+        pieces_placed = 0 # ilość ułożonych klocków
 
-        for step in range(MAX_STEPS_PER_EPISODE):
-            action = agent.select_action(state)
-            next_state, reward, done = env.step(action)
+        while placements and pieces_placed < MAX_PIECES: # dopóki gra istnieje i ilość obecnych klocków < niż maks
+            action_idx = agent.select_action(placements) # wybieramy akcję
+            state_features = placements[action_idx][2] # cechy planszy
 
-            agent.store(state, action, reward, next_state, done)
-            agent.learn()
+            next_placements, reward, done = env.step(action_idx) # agent wykonuje ruch
 
-            state = next_state
-            total_reward += reward
-            steps += 1
+            agent.store(state_features, reward, next_placements, done) # zapisujemy stan do bufora
+            if pieces_placed % LEARN_EVERY == 0: # jeżeli jest etap na naukę to wykonujemy funkcję learn
+                agent.learn()
+
+            total_reward += reward # dodajemy nagrodę
+            pieces_placed += 1 # zwiększamy ilośc klocków
+            placements = next_placements # lista możliwych ruchów dla następnego
 
             if done:
                 break
 
-        agent.decay_epsilon()
+        agent.decay_epsilon() # zmniejszamy epsilon
 
-        # Update target network periodically
         if episode % agent.target_update_freq == 0:
-            agent.update_target()
+            agent.update_target() # kopiujemy wagi z policy_net do target net
 
-        # Logging
         if episode % 10 == 0:
+            points = env.game.get_points()
             print(
                 f"Episode {episode:>5} | "
-                f"Steps: {steps:>5} | "
+                f"Pieces: {pieces_placed:>4} | "
                 f"Reward: {total_reward:>8.1f} | "
-                f"Points: {env.game.get_points():>6} | "
+                f"Points: {points:>6} | "
                 f"Epsilon: {agent.epsilon:.3f}"
             )
 
-        # Save best model
-        if total_reward > best_reward:
-            best_reward = total_reward
+        points = env.game.get_points()
+        if points > best_points or episode % SAVE_EVERY == 0:
+            if points > best_points:
+                best_points = points
             agent.save(MODEL_PATH)
 
-        # Periodic save
-        if episode % SAVE_EVERY == 0:
-            agent.save(MODEL_PATH)
-
-    print(f"\nTraining complete. Model saved to {MODEL_PATH}")
+    print(f"\nTraining complete. Best points: {best_points}. Model saved to {MODEL_PATH}")
 
 
 if __name__ == "__main__":
