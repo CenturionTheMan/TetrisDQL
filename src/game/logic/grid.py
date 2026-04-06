@@ -133,3 +133,10 @@ class Grid:
             lines.append(row_str)
 
         return "\n".join(lines)
+
+    @classmethod
+    def from_array(cls, array: np.ndarray):
+        """Create a Grid instance from a numpy array."""
+        grid = cls(Vec2(array.shape[1], array.shape[0]))
+        grid.map = array
+        return grid
