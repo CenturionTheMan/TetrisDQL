@@ -24,12 +24,12 @@ class TetrisEnv:
             return [], -5.0, True
 
         action_idx = min(action_idx, len(placements) - 1) # zabezpieczenie jeśli sieć zwróci za duży indeks
-        rotations, col, _ = placements[action_idx] # ilość rotacji, ustaw na col
+        rotations, col, _, sim_reward = placements[action_idx] # ilość rotacji, ustaw na col
 
-        lines_cleared = self.game.execute_placement(rotations, col) # ustawiamy klocek
-        done = self.game.is_game_over() # sprawdzamy czy koniec grt
+        self.game.execute_placement(rotations, col) # ustawiamy klocek
+        done = self.game.is_game_over() # sprawdzamy czy koniec gry
 
-        reward = [0.0, 1.0, 3.0, 5.0, 8.0][min(lines_cleared, 4)] # nagroda w zależności od zbitych rzędów
+        reward = sim_reward # nagroda = suma kwadratów wartości klocków ze zbitych wierszy
         if done:
             reward -= 5.0
 
@@ -68,7 +68,7 @@ class TetrisEnv:
                 if result is None:
                     continue
  
-                result, lines_cleared = self._clear_lines(result) # czyścimy linie jeśli pełna
+                result, lines_cleared, sim_reward = self._clear_lines(result) # czyścimy linie jeśli pełna
 
                 key = result.tobytes() # unikalny id planszy
                 if key in seen:
@@ -76,7 +76,7 @@ class TetrisEnv:
                 seen.add(key)
 
                 features = self._compute_features(result, lines_cleared)
-                placements.append((rotations, col, features)) # dodajemy stan
+                placements.append((rotations, col, features, sim_reward)) # dodajemy stan
 
         return placements
 
@@ -125,15 +125,16 @@ class TetrisEnv:
                     return False
         return True
 
-    def _clear_lines(self, grid_map: np.ndarray) -> tuple[np.ndarray, int]:
-        """Usuń pełne wiersze i zwróć (nowa_siatka, liczba_wyczyszczonych)."""
+    def _clear_lines(self, grid_map: np.ndarray) -> tuple[np.ndarray, int, float]:
+        """Usuń pełne wiersze i zwróć (nowa_siatka, liczba_wyczyszczonych, nagroda)."""
         full = np.all(grid_map != 0, axis=1)
         n = int(full.sum())
         if n == 0:
-            return grid_map, 0
+            return grid_map, 0, 0.0
+        cleared_reward = float(np.sum(grid_map[full] ** 2))
         kept = grid_map[~full]
         empty = np.zeros((n, grid_map.shape[1]), dtype=grid_map.dtype)
-        return np.vstack([empty, kept]), n
+        return np.vstack([empty, kept]), n, cleared_reward
 
     def _compute_features(self, grid_map: np.ndarray, lines_cleared: int) -> np.ndarray:
         """Oblicz 14 znormalizowanych cech z planszy po umieszczeniu."""
