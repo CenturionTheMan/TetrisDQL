@@ -15,7 +15,7 @@ class Player:
     def __init__(self):
         """Initialize the player and spawn the first block."""
         self.current_block: Grid = None
-        self.change_block()
+        #self.change_block()
 
     # -------------------------------------------------------------------------
     # Block state

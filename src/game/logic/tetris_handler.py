@@ -1,8 +1,8 @@
 from typing import Tuple
 import numpy as np
-from game.logic.player import Player
-from game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
-from game.logic.grid import Grid
+from src.game.logic.player import Player
+from src.game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
+from src.game.logic.grid import Grid
 import random
 
 
@@ -14,18 +14,19 @@ class TetrisHandler(object):
     # Initialization
     # -------------------------------------------------------------------------
 
-    def __init__(self, gird_size: Tuple[int, int] = (10, 20)):
+    def __init__(self, grid):
         """
             Set up the grid, player, and initial game state.
             gird_size: (width, height) tuple specifying the grid dimensions.
         """
-        self.__grid = Grid(Vec2(gird_size[0], gird_size[1]))
+        self.__grid = grid
         self.__player = Player()
 
         player_height = self.__player.get_size().get_y()
         self.__player_top_left = Vec2(0, -player_height)  # Spawn position (above grid)
         self.__points = 0
         self.__is_end = False
+        self.create_player_block()
 
     # -------------------------------------------------------------------------
     # Game loop
@@ -87,11 +88,16 @@ class TetrisHandler(object):
     # -------------------------------------------------------------------------
 
     def create_player_block(self) -> None:
-        """Spawn a new random block at a random x position above the grid.
-        Does nothing if a block is already active."""
         if self.__player.get_block() is not None:
             return
-        self.__player.change_block()
+
+        # Generujemy nasz nowy, "punktowy" klocek
+        new_block = self.generate_random_piece()
+
+        # Ustawiamy go w obiekcie gracza
+        self.__player.set_block(new_block)
+
+        # Reszta Twojej logiki pozycjonowania
         self.__player_top_left = Vec2(
             random.randint(0, self.__grid.get_shape().get_x() - self.__player.get_size().get_x()),
             -self.__player.get_size().get_y()
@@ -223,7 +229,10 @@ class TetrisHandler(object):
                 row_sum += self.__grid.get_value(x, row_idx)
             self.__points += row_sum ** 2
 
-        # Shift all rows above each cleared row downward
+            # Dodajemy sumę rzędu podniesioną do kwadratu
+            self.__points += (current_row_sum ** 2)
+
+        # Shift all rows above downward (to zostaje bez zmian)
         for row_idx in to_remove:
             for y in range(row_idx, 0, -1):
                 for x in range(self.__grid.get_shape().get_x()):
@@ -257,6 +266,26 @@ class TetrisHandler(object):
                     _ = tmp_grid.try_set_value(px, py, v)
 
         return tmp_grid
+
+    def generate_random_piece(self) -> Grid:
+        # Definicje klasycznych kształtów
+        shapes = [
+            np.array([[1, 1, 1], [0, 1, 0]]),  # T
+            np.array([[1, 1], [1, 1]]),  # Square
+            np.array([[1, 1, 1, 1]]),  # Line
+            np.array([[1, 1, 0], [0, 1, 1]]),  # Z
+            np.array([[0, 1, 1], [1, 1, 0]]),  # S
+            np.array([[1, 0, 0], [1, 1, 1]]),  # L
+            np.array([[0, 0, 1], [1, 1, 1]])  # J
+        ]
+        shape = random.choice(shapes)
+
+        # Tworzymy tablicę o tym samym kształcie, ale z losowymi liczbami 1-9
+        # Tam gdzie w 'shape' jest 1, wstawiamy losową cyfrę. Tam gdzie 0, zostaje 0.
+        random_values = np.random.randint(1, 10, size=shape.shape)
+        final_array = np.where(shape == 1, random_values, 0)
+
+        return Grid.from_array(final_array)
     
     def __str__(self) -> str:
         """Return a formatted string showing the current game state:
