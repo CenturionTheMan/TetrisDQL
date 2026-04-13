@@ -1,8 +1,8 @@
 from typing import Tuple
 import numpy as np
-from src.game.logic.player import Player
-from src.game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
-from src.game.logic.grid import Grid
+from game.logic.player import Player
+from game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
+from game.logic.grid import Grid
 import random
 
 
@@ -14,12 +14,12 @@ class TetrisHandler(object):
     # Initialization
     # -------------------------------------------------------------------------
 
-    def __init__(self, grid):
+    def __init__(self, gird_size: Tuple[int, int] = (10, 20)):
         """
             Set up the grid, player, and initial game state.
             gird_size: (width, height) tuple specifying the grid dimensions.
         """
-        self.__grid = grid
+        self.__grid = Grid(Vec2(gird_size[0], gird_size[1]))
         self.__player = Player()
 
         player_height = self.__player.get_size().get_y()
@@ -228,9 +228,6 @@ class TetrisHandler(object):
             for x in range(self.__grid.get_shape().get_x()):
                 row_sum += self.__grid.get_value(x, row_idx)
             self.__points += row_sum ** 2
-
-            # Dodajemy sumę rzędu podniesioną do kwadratu
-            self.__points += (current_row_sum ** 2)
 
         # Shift all rows above downward (to zostaje bez zmian)
         for row_idx in to_remove:
