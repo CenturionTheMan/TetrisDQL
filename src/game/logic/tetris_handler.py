@@ -214,7 +214,7 @@ class TetrisHandler(object):
 
     def check_rows_fulfillment(self) -> int:
         """Find and clear all fully filled rows, then shift everything above down.
-        Awards points per cleared row. Returns the number of rows cleared."""
+        Awards points per sum squared of cleared row squares. Returns the number of rows cleared."""
         to_remove = []
         for row_idx in range(self.__grid.get_shape().get_y()):
             if not self.__grid.check_if_row_has_any_zeros(row_idx):
@@ -229,7 +229,7 @@ class TetrisHandler(object):
                 row_sum += self.__grid.get_value(x, row_idx)
             self.__points += row_sum ** 2
 
-        # Shift all rows above downward (to zostaje bez zmian)
+        # Shift all rows above downward
         for row_idx in to_remove:
             for y in range(row_idx, 0, -1):
                 for x in range(self.__grid.get_shape().get_x()):
