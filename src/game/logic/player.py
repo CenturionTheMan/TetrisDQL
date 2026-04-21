@@ -42,7 +42,7 @@ class Player:
         Each filled cell gets a random value from -1 to -10."""
         all_blocks = get_all_blocks()
         rnd = random.choice(all_blocks).copy()
-        rnd[rnd != 0] = -random.randint(1, 10)
+        rnd[rnd != 0] = np.random.randint(-10, 0, size=rnd[rnd != 0].shape)
         grid = Grid(Vec2(0, 0))
         grid.set_map(rnd)
         self.current_block = grid
