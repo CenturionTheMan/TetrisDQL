@@ -1,5 +1,5 @@
 import pygame
-from src.game.logic.vec2 import Vec2
+from game.logic.vec2 import Vec2
 
 
 class TetrisGUI:
@@ -39,13 +39,15 @@ class TetrisGUI:
         self.clock = pygame.time.Clock()
         self.running = True
 
-        self.font = pygame.font.SysFont("Segoe UI", 28, bold=True)
-        self.small_font = pygame.font.SysFont("Segoe UI", 18)
+        self.font = None
+        self.small_font = None
 
     def init_pygame(self):
         pygame.init()
         self.screen = pygame.display.set_mode((self.game_width + self.ui_width, self.height))
         pygame.display.set_caption("Tetris DQL")
+        self.font = pygame.font.SysFont("Segoe UI", 28, bold=True)
+        self.small_font = pygame.font.SysFont("Segoe UI", 18)
 
     def draw_cell(self, x, y, value, is_ghost=False):
         """Rysuje komórkę z wartością punktową w środku."""

@@ -1,8 +1,8 @@
 from typing import Tuple
 import numpy as np
-from src.game.logic.player import Player
-from src.game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
-from src.game.logic.grid import Grid
+from game.logic.player import Player
+from game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
+from game.logic.grid import Grid
 import random
 
 
@@ -14,12 +14,12 @@ class TetrisHandler(object):
     # Initialization
     # -------------------------------------------------------------------------
 
-    def __init__(self, grid):
+    def __init__(self, gird_size: Tuple[int, int] = (10, 20)):
         """
             Set up the grid, player, and initial game state.
             gird_size: (width, height) tuple specifying the grid dimensions.
         """
-        self.__grid = grid
+        self.__grid = Grid(Vec2(gird_size[0], gird_size[1]))
         self.__player = Player()
 
         player_height = self.__player.get_size().get_y()
@@ -64,8 +64,16 @@ class TetrisHandler(object):
         return self.__is_end
 
     def get_points(self) -> int:
-        """Return the current score (one point per cleared row)."""
+        """Return the current score."""
         return self.__points
+
+    def get_grid(self) -> Grid:
+        """Return the internal grid (without the active block)."""
+        return self.__grid
+
+    def get_player_top_left(self) -> Vec2:
+        """Return the top-left position of the active player block."""
+        return self.__player_top_left
 
     def check_end_condition(self) -> bool:
         """Check if any cell in the top row is occupied. If so, end the game."""
@@ -105,7 +113,7 @@ class TetrisHandler(object):
             for y in range(shape.get_y()):
                 v = block.get_value(x, y)
                 if v != 0:
-                    self.__grid.set_value(pbl.get_x() + x, pbl.get_y() + y, -v)
+                    self.__grid.try_set_value(pbl.get_x() + x, pbl.get_y() + y, -v)
 
     def try_move(self, is_right : bool) -> bool:
         """Attempt to move the player block left or right. Does nothing if the move would cause a collision."""
@@ -169,36 +177,59 @@ class TetrisHandler(object):
     # Row clearing
     # -------------------------------------------------------------------------
 
-    def __init__(self, grid):
-        self.__grid = grid
-        self.__player = Player()
-        self.__points = 0
-        self.__is_end = False
+    def get_player_block(self):
+        """Return the current player block grid (None if no block is active)."""
+        return self.__player.get_block()
 
-        # Ręcznie wywołujemy tworzenie pierwszego, losowego bloku z punktami
-        self.create_player_block()
+    def execute_placement(self, rotations: int, target_col: int) -> int:
+        """Rotate piece clockwise `rotations` times, teleport to target_col, hard-drop.
 
-    def check_rows_fulfillment(self) -> bool:
-        """Find and clear full rows, awarding points based on the SQUARE of the sum."""
+        Returns the number of lines cleared by the placement.
+        Spawns the next piece automatically (or marks game over).
+        """
+        # Rotate clockwise N times
+        for _ in range(rotations % 4):
+            new_block = self.__player.get_rotated_block(is_90_positive=True)
+            self.__player.set_block(new_block)
+
+        # Teleport horizontally to target column (keep spawn y)
+        self.__player_top_left = Vec2(target_col, self.__player_top_left.get_y())
+
+        # Hard drop
+        while not self.has_player_collided():
+            self.__player_top_left += VEC_DOWN
+
+        # Lock into grid
+        self.add_player_shape_to_grid()
+        self.__player.remove_block()
+
+        # Clear lines and count
+        lines_cleared = self.check_rows_fulfillment()
+
+        # Check end condition; spawn next piece if game continues
+        if not self.check_end_condition():
+            self.create_player_block()
+
+        return lines_cleared
+
+    def check_rows_fulfillment(self) -> int:
+        """Find and clear all fully filled rows, then shift everything above down.
+        Awards points per sum squared of cleared row squares. Returns the number of rows cleared."""
         to_remove = []
         for row_idx in range(self.__grid.get_shape().get_y()):
             if not self.__grid.check_if_row_has_any_zeros(row_idx):
                 to_remove.append(row_idx)
 
         if len(to_remove) == 0:
-            return False
+            return 0
 
-        # NOWA LOGIKA PUNKTACJI
         for row_idx in to_remove:
-            current_row_sum = 0
+            row_sum = 0
             for x in range(self.__grid.get_shape().get_x()):
-                # Sumujemy wartości (używając abs, bo u Ciebie zablokowane są ujemne)
-                current_row_sum += abs(self.__grid.get_value(x, row_idx))
+                row_sum += self.__grid.get_value(x, row_idx)
+            self.__points += row_sum ** 2
 
-            # Dodajemy sumę rzędu podniesioną do kwadratu
-            self.__points += (current_row_sum ** 2)
-
-        # Shift all rows above downward (to zostaje bez zmian)
+        # Shift all rows above downward
         for row_idx in to_remove:
             for y in range(row_idx, 0, -1):
                 for x in range(self.__grid.get_shape().get_x()):
@@ -206,7 +237,7 @@ class TetrisHandler(object):
             for x in range(self.__grid.get_shape().get_x()):
                 self.__grid.set_value(x, 0, 0)
 
-        return True
+        return len(to_remove)
 
     # -------------------------------------------------------------------------
     # Rendering
