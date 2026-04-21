@@ -14,7 +14,7 @@ class TetrisEnv:
         self.reset()
 
     def reset(self) -> list:
-        self.game = TetrisHandler((self.GRID_WIDTH, self.GRID_HEIGHT))
+        self.game = TetrisHandler(TetrisHandler(score_algorithm="SUM_OF_SQUARE", gird_size=(self.GRID_WIDTH, self.GRID_HEIGHT)))
         return self.get_valid_placements()
 
     def step(self, action_idx: int) -> tuple[list, float, bool]:

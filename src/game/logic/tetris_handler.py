@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Literal, Tuple
 import numpy as np
 from game.logic.player import Player
 from game.logic.vec2 import Vec2, VEC_DOWN, VEC_LEFT, VEC_RIGHT, VEC_UP
@@ -14,11 +14,17 @@ class TetrisHandler(object):
     # Initialization
     # -------------------------------------------------------------------------
 
-    def __init__(self, gird_size: Tuple[int, int] = (10, 20)):
+    def __init__(self, score_algorithm: Literal["SUM_OF_SQUARE", "CONSTANT"], gird_size: Tuple[int, int] = (10, 20)):
         """
             Set up the grid, player, and initial game state.
             gird_size: (width, height) tuple specifying the grid dimensions.
         """
+        self.__blocks_used_count = 1
+        
+        if score_algorithm not in ["SUM_OF_SQUARE", "CONSTANT"]:
+            raise ValueError(f"Invalid score algorithm: {score_algorithm}. Must be 'SUM_OF_SQUARE' or 'CONSTANT'.")
+        
+        self.__score_algh: Literal["SUM_OF_SQUARE", "CONSTANT"] = score_algorithm
         self.__grid = Grid(Vec2(gird_size[0], gird_size[1]))
         self.__player = Player()
 
@@ -54,6 +60,8 @@ class TetrisHandler(object):
                 return
 
             self.create_player_block()
+            self.__blocks_used_count += 1
+            
 
     # -------------------------------------------------------------------------
     # Game state
@@ -66,6 +74,10 @@ class TetrisHandler(object):
     def get_points(self) -> int:
         """Return the current score."""
         return self.__points
+    
+    def get_points_divided_by_used_blocks(self) -> float:
+        """Return the current score."""
+        return self.__points / self.__blocks_used_count
 
     def get_grid(self) -> Grid:
         """Return the internal grid (without the active block)."""
@@ -224,11 +236,16 @@ class TetrisHandler(object):
             return 0
 
         for row_idx in to_remove:
-            row_sum = 0
-            for x in range(self.__grid.get_shape().get_x()):
-                row_sum += self.__grid.get_value(x, row_idx)
-            self.__points += row_sum ** 2
-
+            if self.__score_algh == "SUM_OF_SQUARE":   
+                row_sum = 0
+                for x in range(self.__grid.get_shape().get_x()):
+                    row_sum += self.__grid.get_value(x, row_idx) 
+                self.__points += row_sum ** 2
+            elif self.__score_algh == "CONSTANT":
+                self.__points += 1
+            else:
+                raise ValueError(f"Unknown score algorithm: {self.__score_algh}")
+            
         # Shift all rows above downward
         for row_idx in to_remove:
             for y in range(row_idx, 0, -1):

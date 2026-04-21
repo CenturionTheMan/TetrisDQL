@@ -11,7 +11,7 @@ class TetrisConsoleGUI:
     FRAMES_PER_UPDATE = 3
 
     def __init__(self):
-        self.game = TetrisHandler()
+        self.game = TetrisHandler(score_algorithm="SUM_OF_SQUARE")
         self.key_queue = queue.Queue()
         self.frames_counter = 0
         self.listener = keyboard.Listener(on_release=self.on_release)
