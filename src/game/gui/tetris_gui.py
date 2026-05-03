@@ -95,11 +95,18 @@ class TetrisGUI:
         pygame.draw.rect(self.screen, (30, 30, 30), panel_rect)
         pygame.draw.line(self.screen, (100, 100, 100), (self.game_width, 0), (self.game_width, self.height), 2)
 
-        score_label = self.small_font.render("SCORE", True, (150, 150, 150))
+        score_label = self.small_font.render("Total Score", True, (150, 150, 150))
         self.screen.blit(score_label, (self.game_width + 20, 30))
 
         score_val = self.font.render(str(self.handler.get_points()), True, (255, 255, 255))
         self.screen.blit(score_val, (self.game_width + 20, 55))
+
+        average_score_label = self.small_font.render("Score per Block", True, (150, 150, 150))
+        self.screen.blit(average_score_label, (self.game_width + 20, 100))
+
+        average_score_val = self.font.render(f"{self.handler.get_points_divided_by_used_blocks():.2f}", True,
+                                             (255, 255, 255))
+        self.screen.blit(average_score_val, (self.game_width + 20, 125))
 
         controls = ["UP: Rotate", "LEFT/RIGHT: Move", "DOWN: Soft Drop"]
         for i, text in enumerate(controls):
