@@ -8,13 +8,14 @@ class TetrisEnv:
     GRID_HEIGHT = 20
     STATE_SIZE = GRID_WIDTH + 4  # dziury, nierówność(różnica wysokości między sąsiednymi kolumnami), maksymalna wysokość, wyczyszczone linie
 
-    def __init__(self):
+    def __init__(self, score_algorithm: str = "SUM_OF_SQUARE"):
+        self.score_algorithm = score_algorithm
         self.game: TetrisHandler | None = None
         self.state_size = self.STATE_SIZE
         self.reset()
 
     def reset(self) -> list:
-        self.game = TetrisHandler(TetrisHandler(score_algorithm="SUM_OF_SQUARE", gird_size=(self.GRID_WIDTH, self.GRID_HEIGHT)))
+        self.game = TetrisHandler(score_algorithm=self.score_algorithm, gird_size=(self.GRID_WIDTH, self.GRID_HEIGHT))
         return self.get_valid_placements()
 
     def step(self, action_idx: int) -> tuple[list, float, bool]:

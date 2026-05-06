@@ -221,6 +221,7 @@ class TetrisHandler(object):
         # Check end condition; spawn next piece if game continues
         if not self.check_end_condition():
             self.create_player_block()
+            self.__blocks_used_count += 1
 
         return lines_cleared
 

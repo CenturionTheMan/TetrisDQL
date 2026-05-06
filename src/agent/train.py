@@ -13,8 +13,8 @@ LEARN_EVERY = 4    # ucz się raz na N klocków zamiast przy każdym — szybszy
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pth")
 
 
-def train():
-    env = TetrisEnv() # tworzymy środowisko
+def train(score_algorithm: str = "SUM_OF_SQUARE", model_path: str = MODEL_PATH):
+    env = TetrisEnv(score_algorithm=score_algorithm) # tworzymy środowisko
     agent = DQLAgent(state_size=TetrisEnv.STATE_SIZE) # tworzymy agenta
 
     best_points = 0 # najwyższa ilość punktów
@@ -60,9 +60,9 @@ def train():
         if points > best_points or episode % SAVE_EVERY == 0:
             if points > best_points:
                 best_points = points
-            agent.save(MODEL_PATH)
+            agent.save(model_path)
 
-    print(f"\nTraining complete. Best points: {best_points}. Model saved to {MODEL_PATH}")
+    print(f"\nTraining complete. Best points: {best_points}. Model saved to {model_path}")
 
 
 if __name__ == "__main__":

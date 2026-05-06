@@ -10,7 +10,7 @@ from agent.tetris_env import TetrisEnv
 from agent.agent import DQLAgent
 from game.gui.tetris_gui import TetrisGUI
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pth")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model_constant.pth")
 FRAME_DELAY = 0.4  # czas między ruchami agenta (sekundy)
 
 
