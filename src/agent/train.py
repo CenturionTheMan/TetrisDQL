@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from agent.tetris_env import TetrisEnv
 from agent.agent import DQLAgent
 
-NUM_EPISODES = 5000 # ilość gier
+NUM_EPISODES = 2000 # ilość gier
 SAVE_EVERY = 100 # co ile zapisać model
 MAX_PIECES = 500   # limit klocków na epizod — zapobiega nieskończonym grom po nauce
 LEARN_EVERY = 4    # ucz się raz na N klocków zamiast przy każdym — szybszy trening

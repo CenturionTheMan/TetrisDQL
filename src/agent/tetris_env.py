@@ -6,7 +6,7 @@ class TetrisEnv:
 
     GRID_WIDTH = 10
     GRID_HEIGHT = 20
-    STATE_SIZE = GRID_WIDTH + 4  # dziury, nierówność(różnica wysokości między sąsiednymi kolumnami), maksymalna wysokość, wyczyszczone linie
+    STATE_SIZE = GRID_WIDTH + 4 + GRID_HEIGHT * 2  # heights, holes, bumpiness, max_height, lines_cleared + (fill_ratio, avg_value) per row
 
     def __init__(self, score_algorithm: str = "SUM_OF_SQUARE"):
         self.score_algorithm = score_algorithm
@@ -132,7 +132,10 @@ class TetrisEnv:
         n = int(full.sum())
         if n == 0:
             return grid_map, 0, 0.0
-        cleared_reward = float(np.sum(grid_map[full] ** 2))
+        if self.score_algorithm == "CONSTANT":
+            cleared_reward = float(n)
+        else:
+            cleared_reward = float(np.sum(grid_map[full] ** 2))
         kept = grid_map[~full]
         empty = np.zeros((n, grid_map.shape[1]), dtype=grid_map.dtype)
         return np.vstack([empty, kept]), n, cleared_reward
@@ -156,10 +159,18 @@ class TetrisEnv:
         bumpiness = float(np.sum(np.abs(np.diff(heights))))
         max_height = float(np.max(heights))
 
+        row_features = []
+        for row in range(self.GRID_HEIGHT):
+            cells = grid_map[row]
+            fill = np.count_nonzero(cells) / self.GRID_WIDTH
+            avg_val = np.mean(np.abs(cells)) / 9.0
+            row_features.extend([fill, avg_val])
+
         return np.array([
             *heights / self.GRID_HEIGHT,
             holes / (self.GRID_WIDTH * self.GRID_HEIGHT),
             bumpiness / (self.GRID_WIDTH * self.GRID_HEIGHT),
             max_height / self.GRID_HEIGHT,
             lines_cleared / 4.0,
+            *row_features,
         ], dtype=np.float32)
