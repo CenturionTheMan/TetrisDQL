@@ -237,13 +237,18 @@ class TetrisHandler(object):
             return 0
 
         for row_idx in to_remove:
-            if self.__score_algh == "SUM_OF_SQUARE":   
-                row_sum = 0
-                for x in range(self.__grid.get_shape().get_x()):
-                    row_sum += self.__grid.get_value(x, row_idx) 
-                self.__points += row_sum ** 2
+            if self.__score_algh == "SUM_OF_SQUARE":
+                row_sum_sq = sum(
+                    self.__grid.get_value(x, row_idx) ** 2
+                    for x in range(self.__grid.get_shape().get_x())
+                )
+                self.__points += row_sum_sq
             elif self.__score_algh == "CONSTANT":
-                self.__points += 1
+                row_sum_sq = sum(
+                    self.__grid.get_value(x, row_idx) ** 2
+                    for x in range(self.__grid.get_shape().get_x())
+                )
+                self.__points += row_sum_sq
             else:
                 raise ValueError(f"Unknown score algorithm: {self.__score_algh}")
             
