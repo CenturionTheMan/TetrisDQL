@@ -60,7 +60,8 @@ class DQLAgent:
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
 
         self.policy_net = QNetwork(state_size).to(self.device) # sieć uczona
         self.target_net = QNetwork(state_size).to(self.device) # sieć zamrożona
