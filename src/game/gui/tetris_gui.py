@@ -101,7 +101,7 @@ class TetrisGUI:
         score_val = self.font.render(str(self.handler.get_points()), True, (255, 255, 255))
         self.screen.blit(score_val, (self.game_width + 20, 55))
 
-        average_score_label = self.small_font.render("Score per Block", True, (150, 150, 150))
+        average_score_label = self.small_font.render("Avg score per row", True, (150, 150, 150))
         self.screen.blit(average_score_label, (self.game_width + 20, 100))
 
         average_score_val = self.font.render(f"{self.handler.get_points_divided_by_used_blocks():.2f}", True,

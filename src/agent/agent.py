@@ -8,21 +8,25 @@ import torch.optim as optim
 
 
 class QNetwork(nn.Module):
-    
+
     def __init__(self, state_size: int):
         super().__init__()
+
         self.net = nn.Sequential(
-            nn.Linear(state_size, 64),
+
+            nn.Linear(state_size, 128),
             nn.ReLU(),
-            nn.Linear(64, 64),
+
+            nn.Linear(128, 64),
             nn.ReLU(),
+
             nn.Linear(64, 1),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x).squeeze(-1) 
-
-
+        return self.net(x).squeeze(-1)
+    
+    
 class ReplayBuffer:
 
     def __init__(self, capacity: int):
@@ -60,8 +64,8 @@ class DQLAgent:
         self.batch_size = batch_size
         self.target_update_freq = target_update_freq
 
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = torch.device("cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {self.device}")
 
         self.policy_net = QNetwork(state_size).to(self.device) # sieć uczona
         self.target_net = QNetwork(state_size).to(self.device) # sieć zamrożona

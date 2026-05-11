@@ -60,7 +60,7 @@ class TetrisHandler(object):
                 return
 
             self.create_player_block()
-            self.__blocks_used_count += 1
+            # self.__blocks_used_count += 1
             
 
     # -------------------------------------------------------------------------
@@ -217,11 +217,13 @@ class TetrisHandler(object):
 
         # Clear lines and count
         lines_cleared = self.check_rows_fulfillment()
+        
 
         # Check end condition; spawn next piece if game continues
         if not self.check_end_condition():
             self.create_player_block()
-            self.__blocks_used_count += 1
+            # self.__blocks_used_count += 1
+            
 
         return lines_cleared
 
@@ -236,19 +238,18 @@ class TetrisHandler(object):
         if len(to_remove) == 0:
             return 0
 
+        self.__blocks_used_count += len(to_remove)
+
+
         for row_idx in to_remove:
             if self.__score_algh == "SUM_OF_SQUARE":
                 row_sum_sq = sum(
-                    self.__grid.get_value(x, row_idx) ** 2
+                    self.__grid.get_value(x, row_idx)
                     for x in range(self.__grid.get_shape().get_x())
-                )
+                ) ** 2
                 self.__points += row_sum_sq
             elif self.__score_algh == "CONSTANT":
-                row_sum_sq = sum(
-                    self.__grid.get_value(x, row_idx) ** 2
-                    for x in range(self.__grid.get_shape().get_x())
-                )
-                self.__points += row_sum_sq
+                self.__points += 1
             else:
                 raise ValueError(f"Unknown score algorithm: {self.__score_algh}")
             

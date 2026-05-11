@@ -6,9 +6,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from agent.tetris_env import TetrisEnv
 from agent.agent import DQLAgent
 
-NUM_EPISODES = 2000 # ilość gier
+NUM_EPISODES = 3000 # ilość gier
 SAVE_EVERY = 100 # co ile zapisać model
 MAX_PIECES = 500   # limit klocków na epizod — zapobiega nieskończonym grom po nauce
+MAX_PIECES_REACHED_AMT_FOR_EARLY_END = 10
 LEARN_EVERY = 4    # ucz się raz na N klocków zamiast przy każdym — szybszy trening
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pth")
 
@@ -19,6 +20,7 @@ def train(score_algorithm: str = "SUM_OF_SQUARE", model_path: str = MODEL_PATH):
 
     best_points = 0 # najwyższa ilość punktów
 
+    max_pieces_games = 0
     for episode in range(1, NUM_EPISODES + 1):
         placements = env.reset() # tworzymy nową grę poprzez reset
         total_reward = 0.0 # łączna nagroda
@@ -40,7 +42,15 @@ def train(score_algorithm: str = "SUM_OF_SQUARE", model_path: str = MODEL_PATH):
 
             if done:
                 break
-
+            
+        if pieces_placed >= MAX_PIECES:
+            max_pieces_games += 1
+            if max_pieces_games >= MAX_PIECES_REACHED_AMT_FOR_EARLY_END:
+                print(f"Early stopping at episode {episode} due to reaching max pieces limit {MAX_PIECES} for {MAX_PIECES_REACHED_AMT_FOR_EARLY_END} episodes.")
+                break
+        else:
+            max_pieces_games = 0
+            
         agent.decay_epsilon() # zmniejszamy epsilon
 
         if episode % agent.target_update_freq == 0:

@@ -1,3 +1,5 @@
+from typing import Literal
+
 import numpy as np
 from game.logic.tetris_handler import TetrisHandler
 
@@ -6,9 +8,10 @@ class TetrisEnv:
 
     GRID_WIDTH = 10
     GRID_HEIGHT = 20
-    STATE_SIZE = GRID_WIDTH + 4 + GRID_HEIGHT * 2  # heights, holes, bumpiness, max_height, lines_cleared + (fill_ratio, avg_value) per row
-
-    def __init__(self, score_algorithm: str = "SUM_OF_SQUARE"):
+    # STATE_SIZE = GRID_WIDTH + 4 + GRID_HEIGHT * 2  # heights, holes, bumpiness, max_height, lines_cleared + (fill_ratio, avg_value) per row
+    STATE_SIZE = GRID_WIDTH * 4 + 4 + GRID_HEIGHT * 2
+    
+    def __init__(self, score_algorithm: Literal['SUM_OF_SQUARE', 'CONSTANT'] = "SUM_OF_SQUARE"):
         self.score_algorithm = score_algorithm
         self.game: TetrisHandler | None = None
         self.state_size = self.STATE_SIZE
@@ -32,7 +35,7 @@ class TetrisEnv:
 
         reward = sim_reward # nagroda = suma kwadratów wartości klocków ze zbitych wierszy
         if done:
-            reward -= 5.0
+            reward -= 10.0 if self.score_algorithm == "SUM_OF_SQUARE" else 5.0
 
         if done:
             return [], reward, True
@@ -134,14 +137,16 @@ class TetrisEnv:
             return grid_map, 0, 0.0
         if self.score_algorithm == "CONSTANT":
             cleared_reward = float(n)
+        elif self.score_algorithm == "SUM_OF_SQUARE":
+            cleared_reward = float(sum(np.sum(row) ** 2 for row in grid_map[full])) * 1.5
         else:
-            cleared_reward = float(np.sum(grid_map[full] ** 2))
+            raise ValueError(f"Unknown score algorithm: {self.score_algorithm}")
         kept = grid_map[~full]
         empty = np.zeros((n, grid_map.shape[1]), dtype=grid_map.dtype)
-        return np.vstack([empty, kept]), n, cleared_reward
+        new_grid = np.vstack([empty, kept])
+        return new_grid, n, cleared_reward
 
     def _compute_features(self, grid_map: np.ndarray, lines_cleared: int) -> np.ndarray:
-        """Oblicz 14 znormalizowanych cech z planszy po umieszczeniu."""
         heights = np.zeros(self.GRID_WIDTH, dtype=np.float32)
         for col in range(self.GRID_WIDTH):
             for row in range(self.GRID_HEIGHT):
@@ -149,28 +154,49 @@ class TetrisEnv:
                     heights[col] = self.GRID_HEIGHT - row
                     break
 
-        holes = sum(
-            1
-            for col in range(self.GRID_WIDTH)
-            for row in range(self.GRID_HEIGHT - int(heights[col]) + 1, self.GRID_HEIGHT)
-            if grid_map[row, col] == 0
-        )
+        holes = 0
+        for col in range(self.GRID_WIDTH):
+            found_block = False
+
+            for row in range(self.GRID_HEIGHT):
+
+                if grid_map[row, col] != 0:
+                    found_block = True
+
+                elif found_block:
+                    holes += 1
 
         bumpiness = float(np.sum(np.abs(np.diff(heights))))
         max_height = float(np.max(heights))
+        col_value_sum = np.zeros(self.GRID_WIDTH, dtype=np.float32)
+        col_max = np.zeros(self.GRID_WIDTH, dtype=np.float32)
+        high_value_count = np.zeros(self.GRID_WIDTH, dtype=np.float32)
+
+        for col in range(self.GRID_WIDTH):
+            column_cells = np.abs(grid_map[:, col])
+            col_value_sum[col] = np.sum(column_cells)
+            col_max[col] = np.max(column_cells)
+            high_value_count[col] = np.sum(column_cells >= 7)
+
+        col_value_sum_norm = col_value_sum / (self.GRID_HEIGHT * 9.0)
+        col_max_norm = col_max / 9.0
+        high_value_count_norm = high_value_count / self.GRID_HEIGHT
 
         row_features = []
+
         for row in range(self.GRID_HEIGHT):
-            cells = grid_map[row]
+            cells = np.abs(grid_map[row])
             fill = np.count_nonzero(cells) / self.GRID_WIDTH
-            avg_val = np.mean(np.abs(cells)) / 9.0
+            avg_val = np.mean(cells) / 9.0
             row_features.extend([fill, avg_val])
 
         return np.array([
-            *heights / self.GRID_HEIGHT,
-            holes / (self.GRID_WIDTH * self.GRID_HEIGHT),
-            bumpiness / (self.GRID_WIDTH * self.GRID_HEIGHT),
-            max_height / self.GRID_HEIGHT,
-            lines_cleared / 4.0,
-            *row_features,
-        ], dtype=np.float32)
+                *heights / self.GRID_HEIGHT,
+                *col_value_sum_norm,
+                *col_max_norm,
+                *high_value_count_norm,
+                holes / (self.GRID_WIDTH * self.GRID_HEIGHT),
+                bumpiness / (self.GRID_WIDTH * self.GRID_HEIGHT),
+                max_height / self.GRID_HEIGHT,
+                lines_cleared / 4.0,
+                *row_features], dtype=np.float32)

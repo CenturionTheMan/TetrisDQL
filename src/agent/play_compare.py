@@ -2,6 +2,9 @@ import sys
 import os
 import time
 import pygame
+import random
+import numpy as np
+import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -11,7 +14,7 @@ from game.gui.tetris_gui import TetrisGUI
 
 MODEL_SQUARE   = os.path.join(os.path.dirname(__file__), "model_sum_of_square.pth")
 MODEL_CONSTANT = os.path.join(os.path.dirname(__file__), "model_constant.pth")
-FRAME_DELAY  = 0.4
+FRAME_DELAY  = .1
 LABEL_HEIGHT = 40
 CELL_SIZE    = 35
 
@@ -118,4 +121,12 @@ def play() -> None:
 
 
 if __name__ == "__main__":
+    seed = 42
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # torch.use_deterministic_algorithms(True)
+    
     play()
