@@ -1,5 +1,7 @@
 import sys
 import os
+import tqdm
+from collections import deque
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -19,9 +21,12 @@ def train(score_algorithm: str = "SUM_OF_SQUARE", model_path: str = MODEL_PATH):
     agent = DQLAgent(state_size=TetrisEnv.STATE_SIZE) # tworzymy agenta
 
     best_points = 0 # najwyższa ilość punktów
-
+    moving_avg_pieces_window = deque(maxlen=50) 
+    moving_avg_points_row_window = deque(maxlen=50) 
+    
     max_pieces_games = 0
-    for episode in range(1, NUM_EPISODES + 1):
+    bar = tqdm.trange(1, NUM_EPISODES + 1, desc="Training", unit="episode")
+    for episode in bar:
         placements = env.reset() # tworzymy nową grę poprzez reset
         total_reward = 0.0 # łączna nagroda
         pieces_placed = 0 # ilość ułożonych klocków
@@ -56,15 +61,18 @@ def train(score_algorithm: str = "SUM_OF_SQUARE", model_path: str = MODEL_PATH):
         if episode % agent.target_update_freq == 0:
             agent.update_target() # kopiujemy wagi z policy_net do target net
 
-        if episode % 10 == 0:
-            points = env.game.get_points()
-            print(
-                f"Episode {episode:>5} | "
-                f"Pieces: {pieces_placed:>4} | "
-                f"Reward: {total_reward:>8.1f} | "
-                f"Points: {points:>6} | "
-                f"Epsilon: {agent.epsilon:.3f}"
-            )
+        moving_avg_pieces_window.append(pieces_placed)
+        avg_pieces = sum(moving_avg_pieces_window) / len(moving_avg_pieces_window) if moving_avg_pieces_window else 0
+
+        moving_avg_points_row_window.append(env.game.get_points_divided_by_used_blocks())
+        avg_points_row = sum(moving_avg_points_row_window) / len(moving_avg_points_row_window) if moving_avg_points_row_window else 0
+
+
+        bar.set_postfix({
+            "AVG_PIE": f"{avg_pieces:.1f}",
+            "AVG_P_ROW": f"{avg_points_row:.1f}",
+            "EPS": f"{agent.epsilon:.3f}"
+        })
 
         points = env.game.get_points()
         if points > best_points or episode % SAVE_EVERY == 0:
