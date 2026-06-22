@@ -11,7 +11,7 @@ class TetrisEnv:
     # STATE_SIZE = GRID_WIDTH + 4 + GRID_HEIGHT * 2  # heights, holes, bumpiness, max_height, lines_cleared + (fill_ratio, avg_value) per row
     STATE_SIZE = GRID_WIDTH * 4 + 4 + GRID_HEIGHT * 2
     
-    def __init__(self, score_algorithm: Literal['SUM_OF_SQUARE', 'CONSTANT'] = "SUM_OF_SQUARE"):
+    def __init__(self, score_algorithm: Literal['SQUARE_OF_SUM', 'CONSTANT'] = "SQUARE_OF_SUM"):
         self.score_algorithm = score_algorithm
         self.game: TetrisHandler | None = None
         self.state_size = self.STATE_SIZE
@@ -35,7 +35,7 @@ class TetrisEnv:
 
         reward = sim_reward # nagroda = suma kwadratów wartości klocków ze zbitych wierszy
         if done:
-            reward -= 10.0 if self.score_algorithm == "SUM_OF_SQUARE" else 5.0
+            reward -= 10.0 if self.score_algorithm == "SQUARE_OF_SUM" else 5.0
 
         if done:
             return [], reward, True
@@ -137,7 +137,7 @@ class TetrisEnv:
             return grid_map, 0, 0.0
         if self.score_algorithm == "CONSTANT":
             cleared_reward = float(n)
-        elif self.score_algorithm == "SUM_OF_SQUARE":
+        elif self.score_algorithm == "SQUARE_OF_SUM":
             cleared_reward = float(sum(np.sum(row) ** 2 for row in grid_map[full])) * 1.5
         else:
             raise ValueError(f"Unknown score algorithm: {self.score_algorithm}")

@@ -16,7 +16,7 @@ LEARN_EVERY = 4    # ucz się raz na N klocków zamiast przy każdym — szybszy
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pth")
 
 
-def train(score_algorithm: str = "SUM_OF_SQUARE", model_path: str = MODEL_PATH):
+def train(score_algorithm: str = "SQUARE_OF_SUM", model_path: str = MODEL_PATH):
     env = TetrisEnv(score_algorithm=score_algorithm) # tworzymy środowisko
     agent = DQLAgent(state_size=TetrisEnv.STATE_SIZE) # tworzymy agenta
 

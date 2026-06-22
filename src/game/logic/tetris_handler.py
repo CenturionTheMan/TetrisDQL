@@ -14,17 +14,17 @@ class TetrisHandler(object):
     # Initialization
     # -------------------------------------------------------------------------
 
-    def __init__(self, score_algorithm: Literal["SUM_OF_SQUARE", "CONSTANT"], gird_size: Tuple[int, int] = (10, 20)):
+    def __init__(self, score_algorithm: Literal["SQUARE_OF_SUM", "CONSTANT"], gird_size: Tuple[int, int] = (10, 20)):
         """
             Set up the grid, player, and initial game state.
             gird_size: (width, height) tuple specifying the grid dimensions.
         """
         self.__blocks_used_count = 1
         
-        if score_algorithm not in ["SUM_OF_SQUARE", "CONSTANT"]:
-            raise ValueError(f"Invalid score algorithm: {score_algorithm}. Must be 'SUM_OF_SQUARE' or 'CONSTANT'.")
+        if score_algorithm not in ["SQUARE_OF_SUM", "CONSTANT"]:
+            raise ValueError(f"Invalid score algorithm: {score_algorithm}. Must be 'SQUARE_OF_SUM' or 'CONSTANT'.")
         
-        self.__score_algh: Literal["SUM_OF_SQUARE", "CONSTANT"] = score_algorithm
+        self.__score_algh: Literal["SQUARE_OF_SUM", "CONSTANT"] = score_algorithm
         self.__grid = Grid(Vec2(gird_size[0], gird_size[1]))
         self.__player = Player()
 
@@ -242,7 +242,7 @@ class TetrisHandler(object):
 
 
         for row_idx in to_remove:
-            if self.__score_algh == "SUM_OF_SQUARE":
+            if self.__score_algh == "SQUARE_OF_SUM":
                 row_sum_sq = sum(
                     self.__grid.get_value(x, row_idx)
                     for x in range(self.__grid.get_shape().get_x())

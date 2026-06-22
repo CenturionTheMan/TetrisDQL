@@ -20,7 +20,7 @@ CELL_SIZE    = 35
 
 
 def _make(model_path: str) -> tuple:
-    env = TetrisEnv(score_algorithm="SUM_OF_SQUARE")
+    env = TetrisEnv(score_algorithm="SQUARE_OF_SUM")
     agent = DQLAgent(state_size=TetrisEnv.STATE_SIZE)
     agent.load(model_path)
     agent.epsilon = 0.0
